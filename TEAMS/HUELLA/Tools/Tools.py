@@ -110,7 +110,7 @@ class AdapterEricsson:
             '5G PRB Use': 'N.PRB.DL.Used.Avg',
         }
         try:
-            df = pd.read_excel(self.input_5g, sheet_name = 'New Dataset 1')
+            df = pd.read_excel(self.intput_5g, sheet_name = 'New Dataset 1')
             # rename the columns to match the huawei format
             df.rename(columns=ericsson_to_huawei_dict, inplace=True)
             # force the eric hour column to the huawei format, HH:MM:SS to HH:MM
@@ -654,8 +654,10 @@ class PRB:
 
             # Extract the last integer from CELLNAMEX and combine it with SITE
             full_df['Site-Sector'] = full_df[key_sector].apply(
-                lambda x: f"{full_df.at[full_df.index[full_df[key_sector] == x][0], key_site]}-{re.findall(r'\\d+', x)[-1]}"
-                if re.findall(r'\\d+', x) else None
+                lambda x: (
+                    f"{full_df.at[full_df.index[full_df[key_sector] == x][0], key_site]}-{match[-1]}"
+                    if (match := re.findall(r'\d+', x)) else None
+                )
             )
             return full_df
         except Exception as e:
@@ -933,7 +935,7 @@ class PRB:
             return full_df_4g_5g
 
         except:
-            print(f"An error occurred while filtering the 4G bands: {e}")
+            print(f"An error occurred while filtering the 4G bands: {np.e}")
             return None
 
     def filter_df_by_4g_5g(self, cell_list):
