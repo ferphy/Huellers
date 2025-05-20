@@ -1,0 +1,12 @@
+.idea
+*__pycache__*
+*.xlsx
+*.xls
+*csv
+*.venv
+*.env
+*venv
+TEAMS/HUELLA/Tools/Data/Clusters.txt
+*Data
+*Output
+*.zip
