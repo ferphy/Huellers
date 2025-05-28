@@ -53,9 +53,9 @@ class AdapterEricsson:
     def __init__(self):
         if AdapterEricsson._instance is not None:
             raise Exception("AdapterEricsson is a singleton class. Use get_instance() method to access the instance.")
-        self.intput_4g = "Data\\Ericsson\\4G.xlsx"
-        self.intput_5g = "Data\\Ericsson\\5G.xlsx"
-        self.intput_3g = "Data\\Ericsson\\3G.xlsx"
+        self.input_4g = "Data\\Ericsson\\4G.csv"
+        self.input_5g = "Data\\Ericsson\\5G.csv"
+        self.input_3g = "Data\\Ericsson\\3G.csv"
         self.output_4g = f'{OUTPUT_FOLDER}/Ericsson/4G_output.csv'
         self.output_5g = f'{OUTPUT_FOLDER}/Ericsson/5G_output.csv'
         self.output_3g = f'{OUTPUT_FOLDER}/Ericsson/3G_output.csv'
@@ -78,13 +78,14 @@ class AdapterEricsson:
             '': 'L.ChMeas.PRB.DL.Used.Avg' # not found
         }
         try:
-            df = pd.read_excel(self.intput_4g, sheet_name='New Dataset 1')
+            df = pd.read_csv(self.input_4g, delimiter=';')
+            df.drop(columns='SEMANA', inplace=True)
             # rename the columns to match the huawei format
             df.rename(columns=ericsson_to_huawei_dict, inplace=True)
             # force the eric hour column to the huawei format, HH:MM:SS to HH:MM
             df[eric_hour_key] = pd.to_datetime(df[eric_hour_key], format='%H:%M').dt.strftime('%H:%M')
             # add the huawei date column with the data from the ericsson date and hour columns
-            df[huawei_date_key] = pd.to_datetime(df[eric_date_key].astype(str) + ' ' + df[eric_hour_key].astype(str), format='%Y-%m-%d %H:%M')
+            df[huawei_date_key] = pd.to_datetime(df[eric_date_key].astype(str) + ' ' + df[eric_hour_key].astype(str), format='%Y/%m/%d %H:%M')
             # remove the ericsson date and hour columns
             df.drop(columns=[eric_date_key, eric_hour_key], inplace=True)
             # remove duplicate columns to avoid errors, this are in other input data like cell_table or thor_cell_scoring
@@ -110,7 +111,7 @@ class AdapterEricsson:
             '5G PRB Use': 'N.PRB.DL.Used.Avg',
         }
         try:
-            df = pd.read_excel(self.intput_5g, sheet_name = 'New Dataset 1')
+            df = pd.read_csv(self.input_5g, delimiter=';')
             # rename the columns to match the huawei format
             df.rename(columns=ericsson_to_huawei_dict, inplace=True)
             # force the eric hour column to the huawei format, HH:MM:SS to HH:MM
@@ -138,10 +139,10 @@ class AdapterEricsson:
             self.generate_4g_output()
             self.generate_5g_output()
             # reset the global input variables to the new generated data
-            global LTE_4G_FILE_PATH
-            global NR_5G_FILE_PATH
-            LTE_4G_FILE_PATH = self.output_4g
-            NR_5G_FILE_PATH = self.output_5g
+             global LTE_4G_FILE_PATH
+             global NR_5G_FILE_PATH
+             LTE_4G_FILE_PATH = self.output_4g
+             NR_5G_FILE_PATH = self.output_5g
 
             print(f"New input files generated for ericsson:")
             print(f"4G: {LTE_4G_FILE_PATH}")
