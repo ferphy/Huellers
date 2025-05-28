@@ -79,13 +79,13 @@ class AdapterEricsson:
         }
         try:
             df = pd.read_csv(self.input_4g, delimiter=';')
-            df.drop(columns='SEMANA', inplace=True)
+            df.drop(columns=['SEMANA'], inplace=True)
             # rename the columns to match the huawei format
             df.rename(columns=ericsson_to_huawei_dict, inplace=True)
             # force the eric hour column to the huawei format, HH:MM:SS to HH:MM
             df[eric_hour_key] = pd.to_datetime(df[eric_hour_key], format='%H:%M').dt.strftime('%H:%M')
             # add the huawei date column with the data from the ericsson date and hour columns
-            df[huawei_date_key] = pd.to_datetime(df[eric_date_key].astype(str) + ' ' + df[eric_hour_key].astype(str), format='%Y/%m/%d %H:%M')
+            df[huawei_date_key] = pd.to_datetime(df[eric_date_key].astype(str) + ' ' + df[eric_hour_key].astype(str), format='%d/%m/%Y %H:%M')
             # remove the ericsson date and hour columns
             df.drop(columns=[eric_date_key, eric_hour_key], inplace=True)
             # remove duplicate columns to avoid errors, this are in other input data like cell_table or thor_cell_scoring
@@ -102,22 +102,24 @@ class AdapterEricsson:
             print(f"An error occurred while adapting the 4G data from Ericsson: {e}")
 
     def generate_5g_output(self):
-        eric_date_key = 'FECHA'
+        eric_date_key = 'Dia'
         eric_hour_key = 'HORA'
         huawei_date_key = 'Date'
         ericsson_to_huawei_dict = {
-            'CELLNAME': 'Cell Name',
+            '5G_GCELDA': 'Cell Name',
             'AVERAGE PRB LOAD DL: E5GPRBDL003: Num_DL_PRBs_Disp': 'N.PRB.DL.Avail.Avg', # found
             '5G PRB Use': 'N.PRB.DL.Used.Avg',
         }
         try:
             df = pd.read_csv(self.input_5g, delimiter=';')
+            df.drop(columns=['Week'], inplace=True)
             # rename the columns to match the huawei format
             df.rename(columns=ericsson_to_huawei_dict, inplace=True)
             # force the eric hour column to the huawei format, HH:MM:SS to HH:MM
-            df[eric_hour_key] = pd.to_datetime(df[eric_hour_key], format='%H:%M').dt.strftime('%H:%M')
+            df[eric_hour_key] = pd.to_datetime(df[eric_hour_key], format='%H:%M:%S').dt.strftime('%H:%M')
+            df[eric_date_key] = pd.to_datetime(df[eric_date_key].astype(str), format='%Y%m%d')
             # add the huawei date column with the data from the ericsson date and hour columns
-            df[huawei_date_key] = pd.to_datetime(df[eric_date_key].astype(str) + ' ' + df[eric_hour_key].astype(str), format='%Y-%m-%d %H:%M')
+            df[huawei_date_key] = pd.to_datetime(df[eric_date_key].astype(str) + ' ' + df[eric_hour_key].astype(str), format='%d/%m/%Y %H:%M')
             # remove the ericsson date and hour columns
             df.drop(columns=[eric_date_key, eric_hour_key], inplace=True)
             # remove duplicate columns to avoid errors, this are in other input data like cell_table or thor_cell_scoring
@@ -139,10 +141,10 @@ class AdapterEricsson:
             self.generate_4g_output()
             self.generate_5g_output()
             # reset the global input variables to the new generated data
-             global LTE_4G_FILE_PATH
-             global NR_5G_FILE_PATH
-             LTE_4G_FILE_PATH = self.output_4g
-             NR_5G_FILE_PATH = self.output_5g
+            global LTE_4G_FILE_PATH
+            global NR_5G_FILE_PATH
+            LTE_4G_FILE_PATH = self.output_4g
+            NR_5G_FILE_PATH = self.output_5g
 
             print(f"New input files generated for ericsson:")
             print(f"4G: {LTE_4G_FILE_PATH}")
