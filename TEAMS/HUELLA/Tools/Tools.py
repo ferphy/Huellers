@@ -65,6 +65,61 @@ class AdapterEricsson:
             AdapterEricsson._instance = AdapterEricsson()
         return AdapterEricsson._instance
 
+    def generate_3g_output(self):
+        eric_date_key = 'DIA'
+        eric_hour_key = 'HORA'
+        huawei_date_key = 'Date'
+        ericsson_to_huawei_dict = {
+            # KPI equivalentes entre Ericsson y Huawei (3G)
+            '3G_UTRANCELL': 'Cell Name'
+            'VOICE DROP CALL RATE: E3GD003: % RAB Drop Voice': '3G_QF_DCR_Voice(%)',
+            'VOICE CALL SETUP SUCCESS RATE FOR FAST DORMANCY: E3GVSS012: % CSSR': '% CSSR CS HW(%)',
+            'CALL SETUP SUCCESS RATE PS (R99+HS) FOR FAST DORMANCY: E3GSSPS012: % CSSR PS': '% CSSR PS HW(%)',
+            'PS DROP CALL RATE (R99+HS): E3GPSD003: % RAB Drop PS': '3G_QF_DCR_PS(%)',
+            'SOFT HANDOVER(EXCL. PREP): E3GSH001 - Voice Sho Success Ratio': '3G_QF_Voice_SHO_Success_Rate(%)',
+            'INTERFREQUENCY HARD HANDOVER SUCCESS (EXCL. PREP): E3GHH001: Cs Interfrequency Hard Handover Success Ratio': '3G_QF_PS_HHO_Success_Rate(%)',
+            'VOICE IRAT 3G TO 2G: E3GTO2G002: Irat 3g To 2g Voice Handover (Excluding Preparation)': '3G_QF_IRAT_3G_to_2G_Voice_HO (excluding preparation)(%)',
+            'THROUGHPUT (KBPS): E3GT002: User Troughput (Kbps)': '3G_QF_DL_Data_Traffic(kB)',
+            'THROUGHPUT (KBPS): E3GT003: UL User Throughput (Kbps)': '3G_QF_UL_Data_Traffic(kB)',
+            'RSSI 3G: E3GRSSI005: RSSI_NEW': '3G_QF_RSSI_UL(dBm)',
+
+            # Distance bins (TP)
+            'TP1 (0.0 - 0.3 Km)': 'VS.TP.UE.0',
+            'TP2 (0.3 - 0.7 Km)': 'VS.TP.UE.1',
+            'TP3 (0.7 - 1.1 Km)': 'VS.TP.UE.2',
+            'TP4 (1.1 - 2.2 Km)': 'VS.TP.UE.3',
+            'TP5 (2.2 - 3.7 Km)': 'VS.TP.UE.4',
+            'TP6 (3.7 - 6.2 Km)': 'VS.TP.UE.5',
+            'TP7 (6.2 - 14.0 Km)': 'VS.TP.UE.6.9',
+            'TP8 (>14.0 Km)': 'VS.TP.UE.More55',
+
+            # IRAT interoperability
+            'INTEROPERABILITY WITH 4G: E3GI4G001: Cssr Csfb': '3G_QF_Calls ending in 2G(%)'
+        }
+        try:
+            df = pd.read_csv(self.input_3g, delimiter=';')
+            # rename the columns to match the huawei format
+            df.rename(columns=ericsson_to_huawei_dict, inplace=True)
+            # force the eric hour column to the huawei format, HH:MM:SS to HH:MM
+            df[eric_hour_key] = pd.to_datetime(df[eric_hour_key], format='%H').dt.strftime('%H:%M')
+            df[eric_date_key] = pd.to_datetime(df[eric_date_key], format='%Y%m%d').dt.strftime('%d/%m/%Y')
+            # add the huawei date column with the data from the ericsson date and hour columns
+            df[huawei_date_key] = pd.to_datetime(df[eric_date_key].astype(str) + ' ' + df[eric_hour_key].astype(str), format='%d/%m/%Y %H:%M')
+            # remove the ericsson date and hour columns
+            df.drop(columns=[eric_date_key, eric_hour_key], inplace=True)
+            # remove duplicate columns to avoid errors, this are in other input data like cell_table or thor_cell_scoring
+            other_data_columns = ['SITE']
+            for col in other_data_columns:
+                if col in df.columns:
+                    df.drop(columns=[col], inplace=True)
+            df.to_csv(self.output_3g, sep=';', index=False)
+
+            #huawei_df = pd.read_csv(self.output_4g, sep=';')
+            # append the new columns to the huawei dataframe
+            
+        except Exception as e:
+            print(f"An error occurred while adapting the 3G data from Ericsson: {e}")
+
     def generate_4g_output(self):
         eric_date_key = 'FECHA'
         eric_hour_key = 'HORA'
