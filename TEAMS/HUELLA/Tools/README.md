@@ -1,0 +1,2 @@
+Falta el KPI de L.ChMeas.PRB.DL.Used.Avg para 4G de Ericsson
+El KPI de N.PRB.DL.Avail.Avg para 5G de Ericsson supuestamente es AVERAGE PRB LOAD DL: E5GPRBDL003: Num_DL_PRBs_Disp pero no es correcto y da un error el programa si se utiliza este ya que se trata de un valor muy grande que al pasarlo de string a float malinterpreta los puntos.

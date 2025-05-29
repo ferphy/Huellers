@@ -75,7 +75,7 @@ class AdapterEricsson:
             '4G Avg PDCP SDU DL/UL Throughput (Mbps) (E4GTDL001)': '4G_User_DL_Throughput(Mbps)(Mbps)',
             '4G PRB USAGE (E4GPU001)': 'PRB.DL.Usage.RATE(%)', # maybe another column
             'CELL AVAILABILITY (E4GVAIL001)': 'L.ChMeas.PRB.DL.Avail', # maybe another column
-            '': 'L.ChMeas.PRB.DL.Used.Avg' # not found
+            '4G PRB USAGE (E4GPU001) 2': 'L.ChMeas.PRB.DL.Used.Avg' # not found
         }
         try:
             df = pd.read_csv(self.input_4g, delimiter=';')
