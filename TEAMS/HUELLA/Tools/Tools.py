@@ -117,7 +117,7 @@ class AdapterEricsson:
             df.rename(columns=ericsson_to_huawei_dict, inplace=True)
             # force the eric hour column to the huawei format, HH:MM:SS to HH:MM
             df[eric_hour_key] = pd.to_datetime(df[eric_hour_key], format='%H:%M:%S').dt.strftime('%H:%M')
-            df[eric_date_key] = pd.to_datetime(df[eric_date_key].astype(str), format='%Y%m%d')
+            df[eric_date_key] = pd.to_datetime(df[eric_date_key], format='%Y%m%d').dt.strftime('%d/%m/%Y')
             # add the huawei date column with the data from the ericsson date and hour columns
             df[huawei_date_key] = pd.to_datetime(df[eric_date_key].astype(str) + ' ' + df[eric_hour_key].astype(str), format='%d/%m/%Y %H:%M')
             # remove the ericsson date and hour columns
