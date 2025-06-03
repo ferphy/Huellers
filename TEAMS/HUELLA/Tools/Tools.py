@@ -636,6 +636,7 @@ class PRB:
             self.db_footprint = pd.read_csv(DB_FOOTPRINT_FILE_PATH, sep=';')
             self.umts_3g = pd.read_csv(UMTS_3G_FILE_PATH, sep=';')
             self.lte_4g = pd.read_csv(LTE_4G_FILE_PATH, sep=';')
+            self.lte_4g = self.lte_4g[~self.lte_4g['Cell Name'].str[8].eq('C')]
             self.nr_5g = pd.read_csv(NR_5G_FILE_PATH, sep=';')
             print("PRB input files loaded successfully.")
             return True
@@ -884,9 +885,9 @@ class PRB:
             full_df['OK/NOK'] = 'NOK'
             # check the values in the TH_HC column and BAND columns
             # if the TH_HC column is >= general_ok and the BAND column is not 'YM' then set the OK/NOK column to OK
-            full_df.loc[(full_df['TH_HC'] >= general_ok) & (full_df['LB/HB'] != ym), 'OK/NOK'] = 'OK'
+            full_df.loc[((full_df['TH_HC'] >= general_ok) | (full_df['PRB_HC'] < 70.0)) & (full_df['LB/HB'] != ym) , 'OK/NOK'] = 'OK'
             # if the TH_HC column is >= YM_ok and the BAND column is 'YM' then set the OK/NOK column to OK
-            full_df.loc[(full_df['TH_HC'] >= YM_ok) & (full_df['LB/HB'] == ym), 'OK/NOK'] = 'OK'
+            full_df.loc[((full_df['TH_HC'] >= YM_ok) | (full_df['PRB_HC'] < 70.0)) & (full_df['LB/HB'] == ym), 'OK/NOK'] = 'OK'
             return full_df
         except Exception as e:
             print(f"An error occurred while adding the OK/NOK column: {e}")
@@ -1266,6 +1267,7 @@ class Footprint:
             self.umts_3g = pd.read_csv(UMTS_3G_FILE_PATH, sep=';')
         if LTE_4G_FILE_PATH != "":
             self.lte_4g = pd.read_csv(LTE_4G_FILE_PATH, sep=';')
+            self.lte_4g = self.lte_4g[~self.lte_4g['Cell Name'].str[8].eq('C')]
         if NR_5G_FILE_PATH != "":
             self.nr_5g = pd.read_csv(NR_5G_FILE_PATH, sep=';')
         self.thor = pd.read_csv(THOR_FILE_PATH, sep=';', low_memory=False)
