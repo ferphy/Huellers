@@ -71,30 +71,31 @@ class AdapterEricsson:
         huawei_date_key = 'Date'
         ericsson_to_huawei_dict = {
             # KPI equivalentes entre Ericsson y Huawei (3G)
-            '3G_UTRANCELL': 'Cell Name'
-            'VOICE DROP CALL RATE: E3GD003: % RAB Drop Voice': '3G_QF_DCR_Voice(%)',
-            'VOICE CALL SETUP SUCCESS RATE FOR FAST DORMANCY: E3GVSS012: % CSSR': '% CSSR CS HW(%)',
-            'CALL SETUP SUCCESS RATE PS (R99+HS) FOR FAST DORMANCY: E3GSSPS012: % CSSR PS': '% CSSR PS HW(%)',
-            'PS DROP CALL RATE (R99+HS): E3GPSD003: % RAB Drop PS': '3G_QF_DCR_PS(%)',
-            'SOFT HANDOVER(EXCL. PREP): E3GSH001 - Voice Sho Success Ratio': '3G_QF_Voice_SHO_Success_Rate(%)',
-            'INTERFREQUENCY HARD HANDOVER SUCCESS (EXCL. PREP): E3GHH001: Cs Interfrequency Hard Handover Success Ratio': '3G_QF_PS_HHO_Success_Rate(%)',
-            'VOICE IRAT 3G TO 2G: E3GTO2G002: Irat 3g To 2g Voice Handover (Excluding Preparation)': '3G_QF_IRAT_3G_to_2G_Voice_HO (excluding preparation)(%)',
-            'THROUGHPUT (KBPS): E3GT002: User Troughput (Kbps)': '3G_QF_DL_Data_Traffic(kB)',
-            'THROUGHPUT (KBPS): E3GT003: UL User Throughput (Kbps)': '3G_QF_UL_Data_Traffic(kB)',
-            'RSSI 3G: E3GRSSI005: RSSI_NEW': '3G_QF_RSSI_UL(dBm)',
+            "3G_UTRANCELL": "Cell Name",
+            "VOICE DROP CALL RATE: E3GD003: % RAB Drop Voice": "3G_QF_DCR_Voice(%)",
+            "VOICE CALL SETUP SUCCESS RATE FOR FAST DORMANCY: E3GVSS012: % CSSR": "% CSSR CS HW(%)",
+            "CALL SETUP SUCCESS RATE PS (R99+HS) FOR FAST DORMANCY: E3GSSPS012: % CSSR PS": "% CSSR PS HW(%)",
+            "PS DROP CALL RATE (R99+HS): E3GPSD003: % RAB Drop PS": "3G_QF_DCR_PS(%)",
+            "SOFT HANDOVER(EXCL. PREP): E3GSH001 - Voice Sho Success Ratio": "3G_QF_Voice_SHO_Success_Rate(%)",
+            "INTERFREQUENCY HARD HANDOVER SUCCESS (EXCL. PREP): E3GHH001: Cs Interfrequency Hard Handover Success Ratio": "3G_QF_PS_HHO_Success_Rate(%)",
+            "VOICE IRAT 3G TO 2G: E3GTO2G002: Irat 3g To 2g Voice Handover (Excluding Preparation)": "3G_QF_IRAT_3G_to_2G_Voice_HO (excluding preparation)(%)",
+            "THROUGHPUT (KBPS): E3GT002: User Troughput (Kbps)": "3G_QF_DL_Data_Traffic(kB)",
+            "THROUGHPUT (KBPS): E3GT003: UL User Throughput (Kbps)": "3G_QF_UL_Data_Traffic(kB)",
+            "3G_QF_RSSI_UL(dBm)": "3G_QF_RSSI_UL(dBm)",
 
             # Distance bins (TP)
-            'TP1 (0.0 - 0.3 Km)': 'VS.TP.UE.0',
-            'TP2 (0.3 - 0.7 Km)': 'VS.TP.UE.1',
-            'TP3 (0.7 - 1.1 Km)': 'VS.TP.UE.2',
-            'TP4 (1.1 - 2.2 Km)': 'VS.TP.UE.3',
-            'TP5 (2.2 - 3.7 Km)': 'VS.TP.UE.4',
-            'TP6 (3.7 - 6.2 Km)': 'VS.TP.UE.5',
-            'TP7 (6.2 - 14.0 Km)': 'VS.TP.UE.6.9',
-            'TP8 (>14.0 Km)': 'VS.TP.UE.More55',
+            "TP1 (0.0 - 0.3 Km)": "VS.TP.UE.0",
+            "TP2 (0.3 - 0.7 Km)": "VS.TP.UE.1",
+            "TP3 (0.7 - 1.1 Km)": "VS.TP.UE.2",
+            "TP4 (1.1 - 2.2 Km)": "VS.TP.UE.3",
+            "TP5 (2.2 - 3.7 Km)": "VS.TP.UE.4",
+            "TP6 (3.7 - 6.2 Km)": "VS.TP.UE.5",
+            "TP7 (6.2 - 14.0 Km)": "VS.TP.UE.6.9",
+            "TP8 (>14.0 Km)": "VS.TP.UE.More55",
+            "3G_MeanDistance(#)": "3G_MeanDistance(#)",
 
             # IRAT interoperability
-            'INTEROPERABILITY WITH 4G: E3GI4G001: Cssr Csfb': '3G_QF_Calls ending in 2G(%)'
+            "INTEROPERABILITY WITH 4G: E3GI4G001: Cssr Csfb": "3G_QF_Calls ending in 2G(%)"
         }
         try:
             df = pd.read_csv(self.input_3g, delimiter=';')
@@ -193,11 +194,14 @@ class AdapterEricsson:
         try:
             if not os.path.exists(f'{OUTPUT_FOLDER}/Ericsson'):
                 makedir(f'{OUTPUT_FOLDER}/Ericsson/4G')
+            self.generate_3g_output()
             self.generate_4g_output()
             self.generate_5g_output()
             # reset the global input variables to the new generated data
+            global UMTS_3G_FILE_PATH
             global LTE_4G_FILE_PATH
             global NR_5G_FILE_PATH
+            UMTS_3G_FILE_PATH = self.output_3g
             LTE_4G_FILE_PATH = self.output_4g
             NR_5G_FILE_PATH = self.output_5g
 
@@ -874,15 +878,15 @@ class PRB:
         # then sets the new column OK/NOK to OK or NOK
         general_ok = 6
         YM_ok = 4
-        ym = "YM"
+        ym = "LB"
         try:
             # create a new column in the full_df dataframe with the name OK/NOK
             full_df['OK/NOK'] = 'NOK'
             # check the values in the TH_HC column and BAND columns
             # if the TH_HC column is >= general_ok and the BAND column is not 'YM' then set the OK/NOK column to OK
-            full_df.loc[(full_df['TH_HC'] >= general_ok) & (full_df['BAND'] != ym), 'OK/NOK'] = 'OK'
+            full_df.loc[(full_df['TH_HC'] >= general_ok) & (full_df['LB/HB'] != ym), 'OK/NOK'] = 'OK'
             # if the TH_HC column is >= YM_ok and the BAND column is 'YM' then set the OK/NOK column to OK
-            full_df.loc[(full_df['TH_HC'] >= YM_ok) & (full_df['BAND'] == ym), 'OK/NOK'] = 'OK'
+            full_df.loc[(full_df['TH_HC'] >= YM_ok) & (full_df['LB/HB'] == ym), 'OK/NOK'] = 'OK'
             return full_df
         except Exception as e:
             print(f"An error occurred while adding the OK/NOK column: {e}")
@@ -947,11 +951,17 @@ class PRB:
         key_5g_used = 'N.PRB.DL.Used.Avg'
         key_4g_throughput = '4G_User_DL_Throughput(Mbps)(Mbps)'
         try:
+            # first we delete the dots to addapt the format
             # format the string with commas to float values
+            lte_4g[key_4g_available] = lte_4g[key_4g_available].astype(str).str.replace('.', '')
             lte_4g[key_4g_available] = lte_4g[key_4g_available].astype(str).str.replace(',', '.')
+            lte_4g[key_4g_used] = lte_4g[key_4g_used].astype(str).str.replace('.', '')
             lte_4g[key_4g_used] = lte_4g[key_4g_used].astype(str).str.replace(',', '.')
+            lte_4g[key_4g_throughput] = lte_4g[key_4g_throughput].astype(str).str.replace('.', '')
             lte_4g[key_4g_throughput] = lte_4g[key_4g_throughput].astype(str).str.replace(',', '.')
+            nr_5g[key_5g_available] = nr_5g[key_5g_available].astype(str).str.replace('.', '')
             nr_5g[key_5g_available] = nr_5g[key_5g_available].astype(str).str.replace(',', '.')
+            nr_5g[key_5g_used] = nr_5g[key_5g_used].astype(str).str.replace('.', '')
             nr_5g[key_5g_used] = nr_5g[key_5g_used].astype(str).str.replace(',', '.')
             # force float conversion of the columns
             lte_4g[key_4g_available] = lte_4g[key_4g_available].astype(float)
@@ -1274,7 +1284,7 @@ class Footprint:
     def filter_3g(self):
         filtered_df = pd.DataFrame()
         shorthand = {'VAL': 'V', 'BAL': 'B', 'MUR': 'U', 'AND': 'A', 'EXT': 'E', 'ARA': 'R', 'CYM': 'K', 'CLM': 'X',
-                    'MAD': 'M', 'CAN': 'T'}
+                    'MAD': 'M', 'CAN': 'W'}
         print("LISTING 3G:")
         print(self.site_list)
         for target_site in self.site_list:
