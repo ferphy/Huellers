@@ -66,6 +66,8 @@ class AdapterEricsson:
         return AdapterEricsson._instance
 
     def generate_3g_output(self):
+        shorthand = {'VALX': 'V', 'BALX': 'B', 'MURX': 'U', 'ANDX': 'A', 'EXTX': 'E', 'ARAX': 'R', 'CYMX': 'K', 'CLMX': 'X',
+                    'MADX': 'M', 'CANX': 'W'}
         eric_date_key = 'DIA'
         eric_hour_key = 'HORA'
         huawei_date_key = 'Date'
@@ -110,6 +112,10 @@ class AdapterEricsson:
             df.drop(columns=[eric_date_key, eric_hour_key], inplace=True)
             # remove duplicate columns to avoid errors, this are in other input data like cell_table or thor_cell_scoring
             other_data_columns = ['SITE']
+            # transform Cell Name to HUA format Example: V0847F1A 
+            df['Cell Name'] = df['Cell Name'].replace(shorthand,regex=True)
+            # fill in NaN cells with /0
+            df = df.fillna('/0')
             for col in other_data_columns:
                 if col in df.columns:
                     df.drop(columns=[col], inplace=True)
@@ -146,6 +152,8 @@ class AdapterEricsson:
             df.drop(columns=[eric_date_key, eric_hour_key], inplace=True)
             # remove duplicate columns to avoid errors, this are in other input data like cell_table or thor_cell_scoring
             other_data_columns = ['SITE']
+            # fill in NaN cells with /0
+            df = df.fillna('/0')
             for col in other_data_columns:
                 if col in df.columns:
                     df.drop(columns=[col], inplace=True)
@@ -180,6 +188,8 @@ class AdapterEricsson:
             df.drop(columns=[eric_date_key, eric_hour_key], inplace=True)
             # remove duplicate columns to avoid errors, this are in other input data like cell_table or thor_cell_scoring
             other_data_columns = ['SITE']
+            # fill in NaN cells with /0
+            df = df.fillna('/0')
             for col in other_data_columns:
                 if col in df.columns:
                     df.drop(columns=[col], inplace=True)
@@ -636,6 +646,7 @@ class PRB:
             self.db_footprint = pd.read_csv(DB_FOOTPRINT_FILE_PATH, sep=';')
             self.umts_3g = pd.read_csv(UMTS_3G_FILE_PATH, sep=';')
             self.lte_4g = pd.read_csv(LTE_4G_FILE_PATH, sep=';')
+            # remove the NBIOT cells
             self.lte_4g = self.lte_4g[~self.lte_4g['Cell Name'].str[8].eq('C')]
             self.nr_5g = pd.read_csv(NR_5G_FILE_PATH, sep=';')
             print("PRB input files loaded successfully.")
@@ -1419,6 +1430,7 @@ class Footprint:
         for row_idx in range(rows):
             if use_last_char:
                 sheet.cell(row=row_idx + 2, column=sector_column).value = data[row_idx][cell_name_column][-1]
+                #data.iloc[row_idx, cell_name_column][-1]
             else:
                 sheet.cell(row=row_idx + 2, column=sector_column).value = data[row_idx][cell_name_column][-2]
                 pass
