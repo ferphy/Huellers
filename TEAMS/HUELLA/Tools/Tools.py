@@ -28,10 +28,10 @@ DB_FOOTPRINT_FILE_PATH = ""
 UMTS_3G_FILE_PATH = ""
 LTE_4G_FILE_PATH = ""
 NR_5G_FILE_PATH = ""
-MR_TEMPLATES_FOLDER = "Data/MR_Templates" # this folder holds the templates for the Huawei KPI
-TEMPLATE_MR_3G_HUA = "MR_3G_TEMPLATE.csv"
-TEMPLATE_MR_4G_HUA = "MR_4G_TEMPLATE.csv"
-TEMPLATE_MR_5G_HUA = "MR_5G_TEMPLATE.csv"
+# this folder holds the templates for the Huawei KPI
+TEMPLATE_MR_3G_HUA = "Data\\MR_Templates\\MR_3G_TEMPLATE.csv"
+TEMPLATE_MR_4G_HUA = "Data\\MR_Templates\\MR_4G_TEMPLATE.csv"
+TEMPLATE_MR_5G_HUA = "Data\\MR_Templates\\MR_5G_TEMPLATE.csv"
 IOM_TEMPLATES_FOLDER = "Data/IOM_Templates" # this folder holds the templates for the IOM data
 TEMPLATE_IOM_2G = "HUAWEI_GSM_CUSTOMIZED_CELL_.xlsx"
 TEMPLATE_IOM_3G = "HUAWEI_UMTS_CUSTOMIZED_CELL_.xlsx"
@@ -50,26 +50,74 @@ DATE_END = datetime.datetime.now().date().strftime('%Y-%m-%d %H:%M')
 
 PRB_TEMPLATE_CHECK = "Data\\PRBs_Templates\\PRB_THP_TEMPLATE_CHECK.xlsx"
 
+class KPIs:
+    _instance = None
+    def __init__(self):
+        if KPIs._instance is not None:
+            raise Exception("KPIs is a singleton class. Use get_instance() method to access the instance.")
+        self.data_3g = pd.read_csv(TEMPLATE_MR_3G_HUA, sep=';')
+        self.data_4g = pd.read_csv(TEMPLATE_MR_4G_HUA, sep=';')
+        self.data_5g = pd.read_csv(TEMPLATE_MR_5G_HUA, sep=';') 
+        self.get_input_files()
+
+    @staticmethod
+    def get_instance():
+        if KPIs._instance is None:
+            KPIs._instance = KPIs()
+        return KPIs._instance
+    
+    def get_input_files(self):
+        # loads  QUALITY_BOOST_TRACKIN CELLTABLE THOR_CELL_SCORING DB_FOOTPRINT UMTS_3G LTE_4G NR_5G
+        # and saves them in the class variables
+        try:
+            self.quality_boost_tracking = pd.read_csv(QUALITY_BOOST_TRACKING_FILE_PATH, sep=';')
+            self.cell_table = pd.read_csv(CELLTABLE_FILE_PATH, sep=';', low_memory=False) # low_memory=False to avoid dtype warning
+            self.thor_cell_scoring = pd.read_csv(THOR_FILE_PATH, sep=';', low_memory=False) # low_memory=False to avoid dtype warning
+            self.db_footprint = pd.read_csv(DB_FOOTPRINT_FILE_PATH, sep=';')
+            self.umts_3g = pd.read_csv(UMTS_3G_FILE_PATH, sep=';')
+            self.lte_4g = pd.read_csv(LTE_4G_FILE_PATH, sep=';')
+            # remove the NBIOT cells
+            self.lte_4g = self.lte_4g[~self.lte_4g['Cell Name'].str[8].eq('C')]
+            self.nr_5g = pd.read_csv(NR_5G_FILE_PATH, sep=';')
+            print("Input files loaded successfully.")
+            return True
+        except Exception as e:
+            print(f"An error occurred while loading the input files: {e}")
+            return False
+        
+    def add_to_data(self, df_extern: pd.DataFrame, map: dict, target_df_name: str):
+        # Add the external data rows to the stored data
+        # It creates a new DataFrame with the columns of the template and the external data
+        mapped_data = pd.DataFrame()
+        try:
+            template = getattr(self, target_df_name) # Look for the string between its attributes
+            for col_in in template.columns:
+                col_out = map.get(col_in, col_in) 
+                mapped_data[col_in] = df_extern.get(col_out, pd.NA) # Store the values of the column with the same name or its respective in the dict
+            updated_df = pd.concat([template, mapped_data], ignore_index=True)
+            setattr(self, target_df_name, updated_df)
+            print(f"{target_df_name} data loaded successfully in KPIs.")
+            return True
+        except Exception as e:
+            print(f"Error loading {target_df_name} into KPIs: {e}")
+            return False
+
+
 class AdapterEricsson:
     _instance = None
     # the purpose of this class is to adapt the input data to the huawei format
     # and sets the input data to the new generated data before generating prb and footprint data
     def __init__(self):
         if AdapterEricsson._instance is not None:
-            raise Exception("AdapterEricsson is a singleton class. Use get_instance() method to access the instance.")
-        self.input_4g = "Data\\Ericsson\\4G.csv"
-        self.input_5g = "Data\\Ericsson\\5G.csv"
-        self.input_3g = "Data\\Ericsson\\3G.csv"
-        self.output_4g = f'{OUTPUT_FOLDER}/Ericsson/4G_output.csv'
-        self.output_5g = f'{OUTPUT_FOLDER}/Ericsson/5G_output.csv'
-        self.output_3g = f'{OUTPUT_FOLDER}/Ericsson/3G_output.csv'
+            raise Exception("AdapterEricsson is a singleton class. Use get_instance() method to access the instance.") 
 
+    @staticmethod
     def get_instance():
         if AdapterEricsson._instance is None:
             AdapterEricsson._instance = AdapterEricsson()
         return AdapterEricsson._instance
 
-    def generate_3g_output(self):
+    def generate_3g_output(self, data: KPIs):
         shorthand = {'VALX': 'V', 'BALX': 'B', 'MURX': 'U', 'ANDX': 'A', 'EXTX': 'E', 'ARAX': 'R', 'CYMX': 'K', 'CLMX': 'X',
                     'MADX': 'M', 'CANX': 'W'}
         eric_date_key = 'DIA'
@@ -77,6 +125,7 @@ class AdapterEricsson:
         huawei_date_key = 'Date'
         ericsson_to_huawei_dict = {
             # KPI equivalentes entre Ericsson y Huawei (3G)
+            'Date': 'Date',
             "3G_UTRANCELL": "Cell Name",
             "VOICE DROP CALL RATE: E3GD003: % RAB Drop Voice": "3G_QF_DCR_Voice(%)",
             "VOICE CALL SETUP SUCCESS RATE FOR FAST DORMANCY: E3GVSS012: % CSSR": "% CSSR CS HW(%)",
@@ -104,9 +153,7 @@ class AdapterEricsson:
             "INTEROPERABILITY WITH 4G: E3GI4G001: Cssr Csfb": "3G_QF_Calls ending in 2G(%)"
         }
         try:
-            df = pd.read_csv(self.input_3g, delimiter=';')
-            # rename the columns to match the huawei format
-            df.rename(columns=ericsson_to_huawei_dict, inplace=True)
+            df = data.umts_3g
             # force the eric hour column to the huawei format, HH:MM:SS to HH:MM
             df[eric_hour_key] = pd.to_datetime(df[eric_hour_key], format='%H').dt.strftime('%H:%M')
             df[eric_date_key] = pd.to_datetime(df[eric_date_key], format='%Y%m%d').dt.strftime('%d/%m/%Y')
@@ -123,7 +170,8 @@ class AdapterEricsson:
             for col in other_data_columns:
                 if col in df.columns:
                     df.drop(columns=[col], inplace=True)
-            df.to_csv(self.output_3g, sep=';', index=False)
+            # Add 3G to data_3G in KPIs Class
+            data.add_to_data(df,ericsson_to_huawei_dict,"data_3G")
 
             #huawei_df = pd.read_csv(self.output_4g, sep=';')
             # append the new columns to the huawei dataframe
@@ -131,11 +179,12 @@ class AdapterEricsson:
         except Exception as e:
             print(f"An error occurred while adapting the 3G data from Ericsson: {e}")
 
-    def generate_4g_output(self):
+    def generate_4g_output(self, data: KPIs):
         eric_date_key = 'FECHA'
         eric_hour_key = 'HORA'
         huawei_date_key = 'Date'
         ericsson_to_huawei_dict = {
+            'Date': 'Date',
             'CELLNAME': 'Cell Name',
             'PDCCH USAGE (E4GPD001)': 'PDCCH.Usage.RATE(%)',
             '4G Avg PDCP SDU DL/UL Throughput (Mbps) (E4GTDL001)': '4G_User_DL_Throughput(Mbps)(Mbps)',
@@ -144,10 +193,7 @@ class AdapterEricsson:
             '4G PRB USAGE (E4GPU001) 2': 'L.ChMeas.PRB.DL.Used.Avg' # not found
         }
         try:
-            df = pd.read_csv(self.input_4g, delimiter=';')
-            df.drop(columns=['SEMANA'], inplace=True)
-            # rename the columns to match the huawei format
-            df.rename(columns=ericsson_to_huawei_dict, inplace=True)
+            df = data.lte_4g
             # force the eric hour column to the huawei format, HH:MM:SS to HH:MM
             df[eric_hour_key] = pd.to_datetime(df[eric_hour_key], format='%H:%M').dt.strftime('%H:%M')
             # add the huawei date column with the data from the ericsson date and hour columns
@@ -161,7 +207,8 @@ class AdapterEricsson:
             for col in other_data_columns:
                 if col in df.columns:
                     df.drop(columns=[col], inplace=True)
-            df.to_csv(self.output_4g, sep=';', index=False)
+            
+            data.add_to_data(df,ericsson_to_huawei_dict,"data_4G")
 
             #huawei_df = pd.read_csv(self.output_4g, sep=';')
             # append the new columns to the huawei dataframe
@@ -169,20 +216,18 @@ class AdapterEricsson:
         except Exception as e:
             print(f"An error occurred while adapting the 4G data from Ericsson: {e}")
 
-    def generate_5g_output(self):
+    def generate_5g_output(self, data: KPIs):
         eric_date_key = 'Dia'
         eric_hour_key = 'HORA'
         huawei_date_key = 'Date'
         ericsson_to_huawei_dict = {
+            'Date': 'Date',
             '5G_GCELDA': 'Cell Name',
             'AVERAGE PRB LOAD DL: E5GPRBDL003: Num_DL_PRBs_Disp': 'N.PRB.DL.Avail.Avg', # found
             '5G PRB Use': 'N.PRB.DL.Used.Avg',
         }
         try:
-            df = pd.read_csv(self.input_5g, delimiter=';')
-            df.drop(columns=['Week'], inplace=True)
-            # rename the columns to match the huawei format
-            df.rename(columns=ericsson_to_huawei_dict, inplace=True)
+            df = data.nr_5g
             # force the eric hour column to the huawei format, HH:MM:SS to HH:MM
             df[eric_hour_key] = pd.to_datetime(df[eric_hour_key], format='%H:%M:%S').dt.strftime('%H:%M')
             df[eric_date_key] = pd.to_datetime(df[eric_date_key], format='%Y%m%d').dt.strftime('%d/%m/%Y')
@@ -197,32 +242,20 @@ class AdapterEricsson:
             for col in other_data_columns:
                 if col in df.columns:
                     df.drop(columns=[col], inplace=True)
-            df.to_csv(self.output_5g, sep=';', index=False)
+
+            data.add_to_data(df,ericsson_to_huawei_dict,"data_5G")
 
         except Exception as e:
             print(f"An error occurred while reading the 5G data from Ericsson: {e}")
             return
 
-    def generate_new_input(self):
+    def generate_new_input(self, data: KPIs):
         #adapts all the input and sets the input paths to the new generated data
         try:
-            if not os.path.exists(f'{OUTPUT_FOLDER}/Ericsson'):
-                makedir(f'{OUTPUT_FOLDER}/Ericsson/4G')
-            self.generate_3g_output()
-            self.generate_4g_output()
-            self.generate_5g_output()
-            # reset the global input variables to the new generated data
-            global UMTS_3G_FILE_PATH
-            global LTE_4G_FILE_PATH
-            global NR_5G_FILE_PATH
-            UMTS_3G_FILE_PATH = self.output_3g
-            LTE_4G_FILE_PATH = self.output_4g
-            NR_5G_FILE_PATH = self.output_5g
+            self.generate_3g_output(data)
+            self.generate_4g_output(data)
+            self.generate_5g_output(data)
 
-            print(f"New input files generated for ericsson:")
-            print(f"4G: {LTE_4G_FILE_PATH}")
-            print(f"5G: {NR_5G_FILE_PATH}")
-            print(f"3G: {UMTS_3G_FILE_PATH}")
         except Exception as e:
             print(f"An error occurred while generating the new input files: {e}")
 
@@ -640,24 +673,23 @@ class PRB:
             PRB._instance = PRB()
         return PRB._instance
 
-    def get_input_files(self):
+    def get_input_files(self, data: KPIs):
         # loads  QUALITY_BOOST_TRACKIN CELLTABLE THOR_CELL_SCORING DB_FOOTPRINT UMTS_3G LTE_4G NR_5G
         # and saves them in the class variables
         try:
-            self.quality_boost_tracking = pd.read_csv(QUALITY_BOOST_TRACKING_FILE_PATH, sep=';')
-            self.cell_table = pd.read_csv(CELLTABLE_FILE_PATH, sep=';', low_memory=False) # low_memory=False to avoid dtype warning
-            self.thor_cell_scoring = pd.read_csv(THOR_FILE_PATH, sep=';', low_memory=False) # low_memory=False to avoid dtype warning
-            self.db_footprint = pd.read_csv(DB_FOOTPRINT_FILE_PATH, sep=';')
-            self.umts_3g = pd.read_csv(UMTS_3G_FILE_PATH, sep=';')
-            self.lte_4g = pd.read_csv(LTE_4G_FILE_PATH, sep=';')
-            # remove the NBIOT cells
-            self.lte_4g = self.lte_4g[~self.lte_4g['Cell Name'].str[8].eq('C')]
-            self.nr_5g = pd.read_csv(NR_5G_FILE_PATH, sep=';')
-            print("PRB input files loaded successfully.")
+            self.quality_boost_tracking = data.quality_boost_tracking
+            self.cell_table = data.cell_table
+            self.thor_cell_scoring = data.thor_cell_scoring
+            self.db_footprint = data.db_footprint
+            self.umts_3g = data.data_3g
+            self.lte_4g = data.data_4g
+            self.nr_5g = data.data_5g
+            print("Input files loaded successfully in PRB.")
             return True
         except Exception as e:
-            print(f"An error occurred while loading the PRB input files: {e}")
+            print(f"An error occurred while loading the input files: {e}")
             return False
+    
 
     def print_input_files(self):
         # prints the input files to the console for debugging purposes
@@ -1226,7 +1258,7 @@ class PRB:
     def generate_prb_files(self):
         was_successful = True
         try:
-            self.get_input_files()
+            #self.get_input_files()
             #self.print_input_files() # DEBUG delete later
             print("Generating PRB output...")
             self.generate_prb_for_cluster("ALL")
@@ -1278,16 +1310,6 @@ class Footprint:
 
     def obtain_cluster_footprint(self, cluster_name):
         self.cluster_name = cluster_name
-        if UMTS_3G_FILE_PATH != "":
-            self.umts_3g = pd.read_csv(UMTS_3G_FILE_PATH, sep=';')
-        if LTE_4G_FILE_PATH != "":
-            self.lte_4g = pd.read_csv(LTE_4G_FILE_PATH, sep=';')
-            self.lte_4g = self.lte_4g[~self.lte_4g['Cell Name'].str[8].eq('C')]
-        if NR_5G_FILE_PATH != "":
-            self.nr_5g = pd.read_csv(NR_5G_FILE_PATH, sep=';')
-        self.thor = pd.read_csv(THOR_FILE_PATH, sep=';', low_memory=False)
-        self.ct = pd.read_csv(CELLTABLE_FILE_PATH, sep=';', low_memory=False)
-        self.db = pd.read_csv(DB_FOOTPRINT_FILE_PATH, sep=';')
         self.current_cluster_folder = self.output_subfolder + "/" + cluster_name
         makedir(self.current_cluster_folder)
         iom_instance = IOM.get_instance()
@@ -1682,6 +1704,7 @@ class FileRequester(tk.Toplevel):
                 iom = IOM.get_instance()
                 iom.generate_tmp_iom_files()
             case "PRBs + Footprint":
+                data = KPIs.get_instance()
                 prog = FootProgressReporter(self)
                 prog.grab_set()
                 process_thread = threading.Thread(target=prog.process)
@@ -1689,8 +1712,13 @@ class FileRequester(tk.Toplevel):
                 process_thread.start()
                 if ericsson:
                     eric = AdapterEricsson.get_instance()
-                    eric.generate_new_input()
+                    eric.generate_new_input(data)
+                else:
+                    data.add_to_data(data.umts_3g,{},"data_3G")
+                    data.add_to_data(data.lte_4g,{},"data_4G")
+                    data.add_to_data(data.nr_5g,{},"data_5G")
                 prb = PRB.get_instance()
+                prb.get_input_files(data)
                 prb.generate_prb_files()
 
 
