@@ -77,7 +77,7 @@ class KPIs:
             self.umts_3g = pd.read_csv(UMTS_3G_FILE_PATH, sep=';')
             self.lte_4g = pd.read_csv(LTE_4G_FILE_PATH, sep=';')
             # remove the NBIOT cells
-            self.lte_4g = self.lte_4g[~self.lte_4g['Cell Name'].str[8].eq('C')]
+            # self.lte_4g = self.lte_4g[~self.lte_4g['Cell Name'].str[8].eq('C')]
             self.nr_5g = pd.read_csv(NR_5G_FILE_PATH, sep=';')
             print("Input files loaded successfully.")
             return True
@@ -96,7 +96,7 @@ class KPIs:
                 mapped_data[col_in] = df_extern.get(col_out, pd.NA) # Store the values of the column with the same name or its respective in the dict
             updated_df = pd.concat([template, mapped_data], ignore_index=True)
             setattr(self, target_df_name, updated_df)
-            print(f"{target_df_name} data loaded successfully in KPIs.")
+            print(f"{target_df_name} loaded successfully in KPIs.")
             return True
         except Exception as e:
             print(f"Error loading {target_df_name} into KPIs: {e}")
@@ -164,14 +164,14 @@ class AdapterEricsson:
             # remove duplicate columns to avoid errors, this are in other input data like cell_table or thor_cell_scoring
             other_data_columns = ['SITE']
             # transform Cell Name to HUA format Example: V0847F1A 
-            df['Cell Name'] = df['Cell Name'].replace(shorthand,regex=True)
+            df['3G_UTRANCELL'] = df['3G_UTRANCELL'].replace(shorthand,regex=True)
             # fill in NaN cells with /0
             # df = df.fillna('/0')
             for col in other_data_columns:
                 if col in df.columns:
                     df.drop(columns=[col], inplace=True)
             # Add 3G to data_3G in KPIs Class
-            data.add_to_data(df,ericsson_to_huawei_dict,"data_3G")
+            data.add_to_data(df,ericsson_to_huawei_dict,"data_3g")
 
             #huawei_df = pd.read_csv(self.output_4g, sep=';')
             # append the new columns to the huawei dataframe
@@ -208,7 +208,7 @@ class AdapterEricsson:
                 if col in df.columns:
                     df.drop(columns=[col], inplace=True)
             
-            data.add_to_data(df,ericsson_to_huawei_dict,"data_4G")
+            data.add_to_data(df,ericsson_to_huawei_dict,"data_4g")
 
             #huawei_df = pd.read_csv(self.output_4g, sep=';')
             # append the new columns to the huawei dataframe
@@ -243,7 +243,7 @@ class AdapterEricsson:
                 if col in df.columns:
                     df.drop(columns=[col], inplace=True)
 
-            data.add_to_data(df,ericsson_to_huawei_dict,"data_5G")
+            data.add_to_data(df,ericsson_to_huawei_dict,"data_5g")
 
         except Exception as e:
             print(f"An error occurred while reading the 5G data from Ericsson: {e}")
@@ -1714,9 +1714,9 @@ class FileRequester(tk.Toplevel):
                     eric = AdapterEricsson.get_instance()
                     eric.generate_new_input(data)
                 else:
-                    data.add_to_data(data.umts_3g,{},"data_3G")
-                    data.add_to_data(data.lte_4g,{},"data_4G")
-                    data.add_to_data(data.nr_5g,{},"data_5G")
+                    data.add_to_data(data.umts_3g,{},"data_3g")
+                    data.add_to_data(data.lte_4g,{},"data_4g")
+                    data.add_to_data(data.nr_5g,{},"data_5g")
                 prb = PRB.get_instance()
                 prb.get_input_files(data)
                 prb.generate_prb_files()
