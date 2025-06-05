@@ -94,6 +94,8 @@ class KPIs:
             for col_in in template.columns:
                 col_out = map.get(col_in, col_in) 
                 mapped_data[col_in] = df_extern.get(col_out, pd.NA) # Store the values of the column with the same name or its respective in the dict
+            
+            mapped_data = mapped_data[template.columns]
             updated_df = pd.concat([template, mapped_data], ignore_index=True)
             setattr(self, target_df_name, updated_df)
             print(f"{target_df_name} loaded successfully in KPIs.")
@@ -1705,11 +1707,12 @@ class FileRequester(tk.Toplevel):
                 iom.generate_tmp_iom_files()
             case "PRBs + Footprint":
                 data = KPIs.get_instance()
-                prog = FootProgressReporter(self)
+                """prog = FootProgressReporter(self)
                 prog.grab_set()
                 process_thread = threading.Thread(target=prog.process)
                 process_thread.daemon = True
                 process_thread.start()
+                """
                 if ericsson:
                     eric = AdapterEricsson.get_instance()
                     eric.generate_new_input(data)
@@ -1717,6 +1720,7 @@ class FileRequester(tk.Toplevel):
                     data.add_to_data(data.umts_3g,{},"data_3g")
                     data.add_to_data(data.lte_4g,{},"data_4g")
                     data.add_to_data(data.nr_5g,{},"data_5g")
+
                 prb = PRB.get_instance()
                 prb.get_input_files(data)
                 prb.generate_prb_files()
