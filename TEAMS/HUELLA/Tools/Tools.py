@@ -28,11 +28,15 @@ DB_FOOTPRINT_FILE_PATH = ""
 UMTS_3G_FILE_PATH = ""
 LTE_4G_FILE_PATH = ""
 NR_5G_FILE_PATH = ""
+MR_TEMPLATES_FOLDER = "Data/MR_Templates" # this folder holds the templates for the Huawei KPI
+TEMPLATE_MR_3G_HUA = "MR_3G_TEMPLATE.csv"
+TEMPLATE_MR_4G_HUA = "MR_4G_TEMPLATE.csv"
+TEMPLATE_MR_5G_HUA = "MR_5G_TEMPLATE.csv"
 IOM_TEMPLATES_FOLDER = "Data/IOM_Templates" # this folder holds the templates for the IOM data
-TEMPLATE_2G = "HUAWEI_GSM_CUSTOMIZED_CELL_.xlsx"
-TEMPLATE_3G = "HUAWEI_UMTS_CUSTOMIZED_CELL_.xlsx"
-TEMPLATE_4G = "HUAWEI_LTE_CUSTOMIZED_CELL_.xlsx"
-TEMPLATE_5G = "HUAWEI_NR_CUSTOMIZED_CELL_.xlsx"
+TEMPLATE_IOM_2G = "HUAWEI_GSM_CUSTOMIZED_CELL_.xlsx"
+TEMPLATE_IOM_3G = "HUAWEI_UMTS_CUSTOMIZED_CELL_.xlsx"
+TEMPLATE_IOM_4G = "HUAWEI_LTE_CUSTOMIZED_CELL_.xlsx"
+TEMPLATE_IOM_5G = "HUAWEI_NR_CUSTOMIZED_CELL_.xlsx"
 PRB_TEMPLATES_FOLDER = "Data\\PRBs_Templates" # this folder holds the templates for the PRB data
 PRB_TEMPLATE = "PRB_THP_.xlsx"
 DATA_FOOTPRINT_TEMPLATE_FILE_PATH = "Data\\Data_footprint_template.xlsx"
@@ -53,9 +57,9 @@ class AdapterEricsson:
     def __init__(self):
         if AdapterEricsson._instance is not None:
             raise Exception("AdapterEricsson is a singleton class. Use get_instance() method to access the instance.")
-        self.intput_4g = "Data\\Ericsson\\4G.xlsx"
-        self.intput_5g = "Data\\Ericsson\\5G.xlsx"
-        self.intput_3g = "Data\\Ericsson\\3G.xlsx"
+        self.input_4g = "Data\\Ericsson\\4G.csv"
+        self.input_5g = "Data\\Ericsson\\5G.csv"
+        self.input_3g = "Data\\Ericsson\\3G.csv"
         self.output_4g = f'{OUTPUT_FOLDER}/Ericsson/4G_output.csv'
         self.output_5g = f'{OUTPUT_FOLDER}/Ericsson/5G_output.csv'
         self.output_3g = f'{OUTPUT_FOLDER}/Ericsson/3G_output.csv'
@@ -64,6 +68,68 @@ class AdapterEricsson:
         if AdapterEricsson._instance is None:
             AdapterEricsson._instance = AdapterEricsson()
         return AdapterEricsson._instance
+
+    def generate_3g_output(self):
+        shorthand = {'VALX': 'V', 'BALX': 'B', 'MURX': 'U', 'ANDX': 'A', 'EXTX': 'E', 'ARAX': 'R', 'CYMX': 'K', 'CLMX': 'X',
+                    'MADX': 'M', 'CANX': 'W'}
+        eric_date_key = 'DIA'
+        eric_hour_key = 'HORA'
+        huawei_date_key = 'Date'
+        ericsson_to_huawei_dict = {
+            # KPI equivalentes entre Ericsson y Huawei (3G)
+            "3G_UTRANCELL": "Cell Name",
+            "VOICE DROP CALL RATE: E3GD003: % RAB Drop Voice": "3G_QF_DCR_Voice(%)",
+            "VOICE CALL SETUP SUCCESS RATE FOR FAST DORMANCY: E3GVSS012: % CSSR": "% CSSR CS HW(%)",
+            "CALL SETUP SUCCESS RATE PS (R99+HS) FOR FAST DORMANCY: E3GSSPS012: % CSSR PS": "% CSSR PS HW(%)",
+            "PS DROP CALL RATE (R99+HS): E3GPSD003: % RAB Drop PS": "3G_QF_DCR_PS(%)",
+            "SOFT HANDOVER(EXCL. PREP): E3GSH001 - Voice Sho Success Ratio": "3G_QF_Voice_SHO_Success_Rate(%)",
+            "INTERFREQUENCY HARD HANDOVER SUCCESS (EXCL. PREP): E3GHH001: Cs Interfrequency Hard Handover Success Ratio": "3G_QF_PS_HHO_Success_Rate(%)",
+            "VOICE IRAT 3G TO 2G: E3GTO2G002: Irat 3g To 2g Voice Handover (Excluding Preparation)": "3G_QF_IRAT_3G_to_2G_Voice_HO (excluding preparation)(%)",
+            "THROUGHPUT (KBPS): E3GT002: User Troughput (Kbps)": "3G_QF_DL_Data_Traffic(kB)",
+            "THROUGHPUT (KBPS): E3GT003: UL User Throughput (Kbps)": "3G_QF_UL_Data_Traffic(kB)",
+            "3G_QF_RSSI_UL(dBm)": "3G_QF_RSSI_UL(dBm)",
+
+            # Distance bins (TP)
+            "TP1 (0.0 - 0.3 Km)": "VS.TP.UE.0",
+            "TP2 (0.3 - 0.7 Km)": "VS.TP.UE.1",
+            "TP3 (0.7 - 1.1 Km)": "VS.TP.UE.2",
+            "TP4 (1.1 - 2.2 Km)": "VS.TP.UE.3",
+            "TP5 (2.2 - 3.7 Km)": "VS.TP.UE.4",
+            "TP6 (3.7 - 6.2 Km)": "VS.TP.UE.5",
+            "TP7 (6.2 - 14.0 Km)": "VS.TP.UE.6.9",
+            "TP8 (>14.0 Km)": "VS.TP.UE.More55",
+            "3G_MeanDistance(#)": "3G_MeanDistance(#)",
+
+            # IRAT interoperability
+            "INTEROPERABILITY WITH 4G: E3GI4G001: Cssr Csfb": "3G_QF_Calls ending in 2G(%)"
+        }
+        try:
+            df = pd.read_csv(self.input_3g, delimiter=';')
+            # rename the columns to match the huawei format
+            df.rename(columns=ericsson_to_huawei_dict, inplace=True)
+            # force the eric hour column to the huawei format, HH:MM:SS to HH:MM
+            df[eric_hour_key] = pd.to_datetime(df[eric_hour_key], format='%H').dt.strftime('%H:%M')
+            df[eric_date_key] = pd.to_datetime(df[eric_date_key], format='%Y%m%d').dt.strftime('%d/%m/%Y')
+            # add the huawei date column with the data from the ericsson date and hour columns
+            df[huawei_date_key] = pd.to_datetime(df[eric_date_key].astype(str) + ' ' + df[eric_hour_key].astype(str), format='%d/%m/%Y %H:%M')
+            # remove the ericsson date and hour columns
+            df.drop(columns=[eric_date_key, eric_hour_key], inplace=True)
+            # remove duplicate columns to avoid errors, this are in other input data like cell_table or thor_cell_scoring
+            other_data_columns = ['SITE']
+            # transform Cell Name to HUA format Example: V0847F1A 
+            df['Cell Name'] = df['Cell Name'].replace(shorthand,regex=True)
+            # fill in NaN cells with /0
+            # df = df.fillna('/0')
+            for col in other_data_columns:
+                if col in df.columns:
+                    df.drop(columns=[col], inplace=True)
+            df.to_csv(self.output_3g, sep=';', index=False)
+
+            #huawei_df = pd.read_csv(self.output_4g, sep=';')
+            # append the new columns to the huawei dataframe
+            
+        except Exception as e:
+            print(f"An error occurred while adapting the 3G data from Ericsson: {e}")
 
     def generate_4g_output(self):
         eric_date_key = 'FECHA'
@@ -75,20 +141,23 @@ class AdapterEricsson:
             '4G Avg PDCP SDU DL/UL Throughput (Mbps) (E4GTDL001)': '4G_User_DL_Throughput(Mbps)(Mbps)',
             '4G PRB USAGE (E4GPU001)': 'PRB.DL.Usage.RATE(%)', # maybe another column
             'CELL AVAILABILITY (E4GVAIL001)': 'L.ChMeas.PRB.DL.Avail', # maybe another column
-            '': 'L.ChMeas.PRB.DL.Used.Avg' # not found
+            '4G PRB USAGE (E4GPU001) 2': 'L.ChMeas.PRB.DL.Used.Avg' # not found
         }
         try:
-            df = pd.read_excel(self.intput_4g, sheet_name='New Dataset 1')
+            df = pd.read_csv(self.input_4g, delimiter=';')
+            df.drop(columns=['SEMANA'], inplace=True)
             # rename the columns to match the huawei format
             df.rename(columns=ericsson_to_huawei_dict, inplace=True)
             # force the eric hour column to the huawei format, HH:MM:SS to HH:MM
             df[eric_hour_key] = pd.to_datetime(df[eric_hour_key], format='%H:%M').dt.strftime('%H:%M')
             # add the huawei date column with the data from the ericsson date and hour columns
-            df[huawei_date_key] = pd.to_datetime(df[eric_date_key].astype(str) + ' ' + df[eric_hour_key].astype(str), format='%Y-%m-%d %H:%M')
+            df[huawei_date_key] = pd.to_datetime(df[eric_date_key].astype(str) + ' ' + df[eric_hour_key].astype(str), format='%d/%m/%Y %H:%M')
             # remove the ericsson date and hour columns
             df.drop(columns=[eric_date_key, eric_hour_key], inplace=True)
             # remove duplicate columns to avoid errors, this are in other input data like cell_table or thor_cell_scoring
             other_data_columns = ['SITE']
+            # fill in NaN cells with /0
+            # df = df.fillna('/0')
             for col in other_data_columns:
                 if col in df.columns:
                     df.drop(columns=[col], inplace=True)
@@ -101,26 +170,30 @@ class AdapterEricsson:
             print(f"An error occurred while adapting the 4G data from Ericsson: {e}")
 
     def generate_5g_output(self):
-        eric_date_key = 'FECHA'
+        eric_date_key = 'Dia'
         eric_hour_key = 'HORA'
         huawei_date_key = 'Date'
         ericsson_to_huawei_dict = {
-            'CELLNAME': 'Cell Name',
+            '5G_GCELDA': 'Cell Name',
             'AVERAGE PRB LOAD DL: E5GPRBDL003: Num_DL_PRBs_Disp': 'N.PRB.DL.Avail.Avg', # found
             '5G PRB Use': 'N.PRB.DL.Used.Avg',
         }
         try:
-            df = pd.read_excel(self.intput_5g, sheet_name = 'New Dataset 1')
+            df = pd.read_csv(self.input_5g, delimiter=';')
+            df.drop(columns=['Week'], inplace=True)
             # rename the columns to match the huawei format
             df.rename(columns=ericsson_to_huawei_dict, inplace=True)
             # force the eric hour column to the huawei format, HH:MM:SS to HH:MM
-            df[eric_hour_key] = pd.to_datetime(df[eric_hour_key], format='%H:%M').dt.strftime('%H:%M')
+            df[eric_hour_key] = pd.to_datetime(df[eric_hour_key], format='%H:%M:%S').dt.strftime('%H:%M')
+            df[eric_date_key] = pd.to_datetime(df[eric_date_key], format='%Y%m%d').dt.strftime('%d/%m/%Y')
             # add the huawei date column with the data from the ericsson date and hour columns
-            df[huawei_date_key] = pd.to_datetime(df[eric_date_key].astype(str) + ' ' + df[eric_hour_key].astype(str), format='%Y-%m-%d %H:%M')
+            df[huawei_date_key] = pd.to_datetime(df[eric_date_key].astype(str) + ' ' + df[eric_hour_key].astype(str), format='%d/%m/%Y %H:%M')
             # remove the ericsson date and hour columns
             df.drop(columns=[eric_date_key, eric_hour_key], inplace=True)
             # remove duplicate columns to avoid errors, this are in other input data like cell_table or thor_cell_scoring
             other_data_columns = ['SITE']
+            # fill in NaN cells with /0
+            # df = df.fillna('/0')
             for col in other_data_columns:
                 if col in df.columns:
                     df.drop(columns=[col], inplace=True)
@@ -135,11 +208,14 @@ class AdapterEricsson:
         try:
             if not os.path.exists(f'{OUTPUT_FOLDER}/Ericsson'):
                 makedir(f'{OUTPUT_FOLDER}/Ericsson/4G')
+            self.generate_3g_output()
             self.generate_4g_output()
             self.generate_5g_output()
             # reset the global input variables to the new generated data
+            global UMTS_3G_FILE_PATH
             global LTE_4G_FILE_PATH
             global NR_5G_FILE_PATH
+            UMTS_3G_FILE_PATH = self.output_3g
             LTE_4G_FILE_PATH = self.output_4g
             NR_5G_FILE_PATH = self.output_5g
 
@@ -397,17 +473,17 @@ class IOM:
         try:
             if cell_table_2g_df is None:
                 raise Exception("Cell table 2G is not set.")
-            template_file_path = os.path.join(IOM_TEMPLATES_FOLDER, TEMPLATE_2G)
+            template_file_path = os.path.join(IOM_TEMPLATES_FOLDER, TEMPLATE_IOM_2G)
             # copy the template file to the output folder and add the cluster name to the file name
             if not os.path.exists(self.output_subfolder):
                 makedir(self.output_subfolder)
             if not os.path.exists(os.path.join(self.output_subfolder, cluster_name)):
                 makedir(os.path.join(self.output_subfolder, cluster_name))
-            shutil.copy(template_file_path, os.path.join(self.output_subfolder, cluster_name, TEMPLATE_2G))
+            shutil.copy(template_file_path, os.path.join(self.output_subfolder, cluster_name, TEMPLATE_IOM_2G))
             # rename the copied template to have the cluster name at the end (eg HUAWEI_LTE_CUSTOMIZED_CELL_cluster_name.xlsx)
-            new_file_name = f"{TEMPLATE_2G.split('.')[0]}{cluster_name}.xlsx"
+            new_file_name = f"{TEMPLATE_IOM_2G.split('.')[0]}{cluster_name}.xlsx"
             new_file_path = os.path.join(self.output_subfolder, cluster_name, new_file_name)
-            os.rename(os.path.join(self.output_subfolder, cluster_name, TEMPLATE_2G), new_file_path)
+            os.rename(os.path.join(self.output_subfolder, cluster_name, TEMPLATE_IOM_2G), new_file_path)
             # open the new file and fill it with the data from the cell table 2g
             fill_template_xlsx(new_file_path, keys_position[0], cell_table_2g_df[keys_to_fill[0]].tolist())
             fill_template_xlsx(new_file_path, keys_position[1], cell_table_2g_df[keys_to_fill[1]].tolist())
@@ -424,17 +500,17 @@ class IOM:
         try:
             if cell_table_3g_df is None:
                 raise Exception("Cell table 3G is not set.")
-            template_file_path = os.path.join(IOM_TEMPLATES_FOLDER, TEMPLATE_3G)
+            template_file_path = os.path.join(IOM_TEMPLATES_FOLDER, TEMPLATE_IOM_3G)
             # copy the template file to the output folder and add the cluster name to the file name
             if not os.path.exists(self.output_subfolder):
                 makedir(self.output_subfolder)
             if not os.path.exists(os.path.join(self.output_subfolder, cluster_name)):
                 makedir(os.path.join(self.output_subfolder, cluster_name))
-            shutil.copy(template_file_path, os.path.join(self.output_subfolder, cluster_name, TEMPLATE_3G))
+            shutil.copy(template_file_path, os.path.join(self.output_subfolder, cluster_name, TEMPLATE_IOM_3G))
             # rename the copied template to have the cluster name at the end (eg HUAWEI_LTE_CUSTOMIZED_CELL_cluster_name.xlsx)
-            new_file_name = f"{TEMPLATE_3G.split('.')[0]}{cluster_name}.xlsx"
+            new_file_name = f"{TEMPLATE_IOM_3G.split('.')[0]}{cluster_name}.xlsx"
             new_file_path = os.path.join(self.output_subfolder, cluster_name, new_file_name)
-            os.rename(os.path.join(self.output_subfolder, cluster_name, TEMPLATE_3G), new_file_path)
+            os.rename(os.path.join(self.output_subfolder, cluster_name, TEMPLATE_IOM_3G), new_file_path)
             # open the new file and fill it with the data from the cell table 3g
             fill_template_xlsx(new_file_path, keys_position[0], cell_table_3g_df[keys_to_fill[0]].tolist())
             fill_template_xlsx(new_file_path, keys_position[1], cell_table_3g_df[keys_to_fill[1]].tolist())
@@ -451,17 +527,17 @@ class IOM:
         try:
             if cell_table_4g_df is None:
                 raise Exception("Cell table 4G is not set.")
-            template_file_path = os.path.join(IOM_TEMPLATES_FOLDER, TEMPLATE_4G)
+            template_file_path = os.path.join(IOM_TEMPLATES_FOLDER, TEMPLATE_IOM_4G)
             # copy the template file to the output folder and add the cluster name to the file name
             if not os.path.exists(self.output_subfolder):
                 makedir(self.output_subfolder)
             if not os.path.exists(os.path.join(self.output_subfolder, cluster_name)):
                 makedir(os.path.join(self.output_subfolder, cluster_name))
-            shutil.copy(template_file_path, os.path.join(self.output_subfolder, cluster_name, TEMPLATE_4G))
+            shutil.copy(template_file_path, os.path.join(self.output_subfolder, cluster_name, TEMPLATE_IOM_4G))
             # rename the copied template to have the cluster name at the end (eg HUAWEI_LTE_CUSTOMIZED_CELL_cluster_name.xlsx)
-            new_file_name = f"{TEMPLATE_4G.split('.')[0]}{cluster_name}.xlsx"
+            new_file_name = f"{TEMPLATE_IOM_4G.split('.')[0]}{cluster_name}.xlsx"
             new_file_path = os.path.join(self.output_subfolder, cluster_name, new_file_name)
-            os.rename(os.path.join(self.output_subfolder, cluster_name, TEMPLATE_4G), new_file_path)
+            os.rename(os.path.join(self.output_subfolder, cluster_name, TEMPLATE_IOM_4G), new_file_path)
             # open the new file and fill it with the data from the cell table 4g
             fill_template_xlsx(new_file_path, keys_position[0], cell_table_4g_df[keys_to_fill[0]].tolist())
             fill_template_xlsx(new_file_path, keys_position[1], cell_table_4g_df[keys_to_fill[1]].tolist())
@@ -478,17 +554,17 @@ class IOM:
         try:
             if cell_table_5g_df is None:
                 raise Exception("Cell table 5G is not set.")
-            template_file_path = os.path.join(IOM_TEMPLATES_FOLDER, TEMPLATE_5G)
+            template_file_path = os.path.join(IOM_TEMPLATES_FOLDER, TEMPLATE_IOM_5G)
             # copy the template file to the output folder and add the cluster name to the file name
             if not os.path.exists(self.output_subfolder):
                 makedir(self.output_subfolder)
             if not os.path.exists(os.path.join(self.output_subfolder, cluster_name)):
                 makedir(os.path.join(self.output_subfolder, cluster_name))
-            shutil.copy(template_file_path, os.path.join(self.output_subfolder, cluster_name, TEMPLATE_5G))
+            shutil.copy(template_file_path, os.path.join(self.output_subfolder, cluster_name, TEMPLATE_IOM_5G))
             # rename the copied template to have the cluster name at the end (eg HUAWEI_LTE_CUSTOMIZED_CELL_cluster_name.xlsx)
-            new_file_name = f"{TEMPLATE_5G.split('.')[0]}{cluster_name}.xlsx"
+            new_file_name = f"{TEMPLATE_IOM_5G.split('.')[0]}{cluster_name}.xlsx"
             new_file_path = os.path.join(self.output_subfolder, cluster_name, new_file_name)
-            os.rename(os.path.join(self.output_subfolder, cluster_name, TEMPLATE_5G), new_file_path)
+            os.rename(os.path.join(self.output_subfolder, cluster_name, TEMPLATE_IOM_5G), new_file_path)
             # open the new file and fill it with the data from the cell table 5g
             fill_template_xlsx(new_file_path, keys_position[0], cell_table_5g_df[keys_to_fill[0]].tolist())
             fill_template_xlsx(new_file_path, keys_position[1], cell_table_5g_df[keys_to_fill[1]].tolist())
@@ -574,6 +650,8 @@ class PRB:
             self.db_footprint = pd.read_csv(DB_FOOTPRINT_FILE_PATH, sep=';')
             self.umts_3g = pd.read_csv(UMTS_3G_FILE_PATH, sep=';')
             self.lte_4g = pd.read_csv(LTE_4G_FILE_PATH, sep=';')
+            # remove the NBIOT cells
+            self.lte_4g = self.lte_4g[~self.lte_4g['Cell Name'].str[8].eq('C')]
             self.nr_5g = pd.read_csv(NR_5G_FILE_PATH, sep=';')
             print("PRB input files loaded successfully.")
             return True
@@ -816,15 +894,15 @@ class PRB:
         # then sets the new column OK/NOK to OK or NOK
         general_ok = 6
         YM_ok = 4
-        ym = "YM"
+        ym = "LB"
         try:
             # create a new column in the full_df dataframe with the name OK/NOK
             full_df['OK/NOK'] = 'NOK'
             # check the values in the TH_HC column and BAND columns
             # if the TH_HC column is >= general_ok and the BAND column is not 'YM' then set the OK/NOK column to OK
-            full_df.loc[(full_df['TH_HC'] >= general_ok) & (full_df['BAND'] != ym), 'OK/NOK'] = 'OK'
+            full_df.loc[((full_df['TH_HC'] >= general_ok) | (full_df['PRB_HC'] < 70.0)) & (full_df['LB/HB'] != ym) , 'OK/NOK'] = 'OK'
             # if the TH_HC column is >= YM_ok and the BAND column is 'YM' then set the OK/NOK column to OK
-            full_df.loc[(full_df['TH_HC'] >= YM_ok) & (full_df['BAND'] == ym), 'OK/NOK'] = 'OK'
+            full_df.loc[((full_df['TH_HC'] >= YM_ok) | (full_df['PRB_HC'] < 70.0)) & (full_df['LB/HB'] == ym), 'OK/NOK'] = 'OK'
             return full_df
         except Exception as e:
             print(f"An error occurred while adding the OK/NOK column: {e}")
@@ -889,11 +967,17 @@ class PRB:
         key_5g_used = 'N.PRB.DL.Used.Avg'
         key_4g_throughput = '4G_User_DL_Throughput(Mbps)(Mbps)'
         try:
+            # first we delete the dots to addapt the format
             # format the string with commas to float values
+            lte_4g[key_4g_available] = lte_4g[key_4g_available].astype(str).str.replace('.', '')
             lte_4g[key_4g_available] = lte_4g[key_4g_available].astype(str).str.replace(',', '.')
+            lte_4g[key_4g_used] = lte_4g[key_4g_used].astype(str).str.replace('.', '')
             lte_4g[key_4g_used] = lte_4g[key_4g_used].astype(str).str.replace(',', '.')
+            lte_4g[key_4g_throughput] = lte_4g[key_4g_throughput].astype(str).str.replace('.', '')
             lte_4g[key_4g_throughput] = lte_4g[key_4g_throughput].astype(str).str.replace(',', '.')
+            nr_5g[key_5g_available] = nr_5g[key_5g_available].astype(str).str.replace('.', '')
             nr_5g[key_5g_available] = nr_5g[key_5g_available].astype(str).str.replace(',', '.')
+            nr_5g[key_5g_used] = nr_5g[key_5g_used].astype(str).str.replace('.', '')
             nr_5g[key_5g_used] = nr_5g[key_5g_used].astype(str).str.replace(',', '.')
             # force float conversion of the columns
             lte_4g[key_4g_available] = lte_4g[key_4g_available].astype(float)
@@ -1198,6 +1282,7 @@ class Footprint:
             self.umts_3g = pd.read_csv(UMTS_3G_FILE_PATH, sep=';')
         if LTE_4G_FILE_PATH != "":
             self.lte_4g = pd.read_csv(LTE_4G_FILE_PATH, sep=';')
+            self.lte_4g = self.lte_4g[~self.lte_4g['Cell Name'].str[8].eq('C')]
         if NR_5G_FILE_PATH != "":
             self.nr_5g = pd.read_csv(NR_5G_FILE_PATH, sep=';')
         self.thor = pd.read_csv(THOR_FILE_PATH, sep=';', low_memory=False)
@@ -1216,7 +1301,7 @@ class Footprint:
     def filter_3g(self):
         filtered_df = pd.DataFrame()
         shorthand = {'VAL': 'V', 'BAL': 'B', 'MUR': 'U', 'AND': 'A', 'EXT': 'E', 'ARA': 'R', 'CYM': 'K', 'CLM': 'X',
-                    'MAD': 'M', 'CAN': 'T'}
+                    'MAD': 'M', 'CAN': 'W'}
         print("LISTING 3G:")
         print(self.site_list)
         for target_site in self.site_list:
@@ -1349,6 +1434,7 @@ class Footprint:
         for row_idx in range(rows):
             if use_last_char:
                 sheet.cell(row=row_idx + 2, column=sector_column).value = data[row_idx][cell_name_column][-1]
+                #data.iloc[row_idx, cell_name_column][-1]
             else:
                 sheet.cell(row=row_idx + 2, column=sector_column).value = data[row_idx][cell_name_column][-2]
                 pass
