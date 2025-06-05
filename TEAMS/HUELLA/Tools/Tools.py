@@ -28,11 +28,15 @@ DB_FOOTPRINT_FILE_PATH = ""
 UMTS_3G_FILE_PATH = ""
 LTE_4G_FILE_PATH = ""
 NR_5G_FILE_PATH = ""
+MR_TEMPLATES_FOLDER = "Data/MR_Templates" # this folder holds the templates for the Huawei KPI
+TEMPLATE_MR_3G_HUA = "MR_3G_TEMPLATE.csv"
+TEMPLATE_MR_4G_HUA = "MR_4G_TEMPLATE.csv"
+TEMPLATE_MR_5G_HUA = "MR_5G_TEMPLATE.csv"
 IOM_TEMPLATES_FOLDER = "Data/IOM_Templates" # this folder holds the templates for the IOM data
-TEMPLATE_2G = "HUAWEI_GSM_CUSTOMIZED_CELL_.xlsx"
-TEMPLATE_3G = "HUAWEI_UMTS_CUSTOMIZED_CELL_.xlsx"
-TEMPLATE_4G = "HUAWEI_LTE_CUSTOMIZED_CELL_.xlsx"
-TEMPLATE_5G = "HUAWEI_NR_CUSTOMIZED_CELL_.xlsx"
+TEMPLATE_IOM_2G = "HUAWEI_GSM_CUSTOMIZED_CELL_.xlsx"
+TEMPLATE_IOM_3G = "HUAWEI_UMTS_CUSTOMIZED_CELL_.xlsx"
+TEMPLATE_IOM_4G = "HUAWEI_LTE_CUSTOMIZED_CELL_.xlsx"
+TEMPLATE_IOM_5G = "HUAWEI_NR_CUSTOMIZED_CELL_.xlsx"
 PRB_TEMPLATES_FOLDER = "Data\\PRBs_Templates" # this folder holds the templates for the PRB data
 PRB_TEMPLATE = "PRB_THP_.xlsx"
 DATA_FOOTPRINT_TEMPLATE_FILE_PATH = "Data\\Data_footprint_template.xlsx"
@@ -115,7 +119,7 @@ class AdapterEricsson:
             # transform Cell Name to HUA format Example: V0847F1A 
             df['Cell Name'] = df['Cell Name'].replace(shorthand,regex=True)
             # fill in NaN cells with /0
-            df = df.fillna('/0')
+            # df = df.fillna('/0')
             for col in other_data_columns:
                 if col in df.columns:
                     df.drop(columns=[col], inplace=True)
@@ -153,7 +157,7 @@ class AdapterEricsson:
             # remove duplicate columns to avoid errors, this are in other input data like cell_table or thor_cell_scoring
             other_data_columns = ['SITE']
             # fill in NaN cells with /0
-            df = df.fillna('/0')
+            # df = df.fillna('/0')
             for col in other_data_columns:
                 if col in df.columns:
                     df.drop(columns=[col], inplace=True)
@@ -189,7 +193,7 @@ class AdapterEricsson:
             # remove duplicate columns to avoid errors, this are in other input data like cell_table or thor_cell_scoring
             other_data_columns = ['SITE']
             # fill in NaN cells with /0
-            df = df.fillna('/0')
+            # df = df.fillna('/0')
             for col in other_data_columns:
                 if col in df.columns:
                     df.drop(columns=[col], inplace=True)
@@ -469,17 +473,17 @@ class IOM:
         try:
             if cell_table_2g_df is None:
                 raise Exception("Cell table 2G is not set.")
-            template_file_path = os.path.join(IOM_TEMPLATES_FOLDER, TEMPLATE_2G)
+            template_file_path = os.path.join(IOM_TEMPLATES_FOLDER, TEMPLATE_IOM_2G)
             # copy the template file to the output folder and add the cluster name to the file name
             if not os.path.exists(self.output_subfolder):
                 makedir(self.output_subfolder)
             if not os.path.exists(os.path.join(self.output_subfolder, cluster_name)):
                 makedir(os.path.join(self.output_subfolder, cluster_name))
-            shutil.copy(template_file_path, os.path.join(self.output_subfolder, cluster_name, TEMPLATE_2G))
+            shutil.copy(template_file_path, os.path.join(self.output_subfolder, cluster_name, TEMPLATE_IOM_2G))
             # rename the copied template to have the cluster name at the end (eg HUAWEI_LTE_CUSTOMIZED_CELL_cluster_name.xlsx)
-            new_file_name = f"{TEMPLATE_2G.split('.')[0]}{cluster_name}.xlsx"
+            new_file_name = f"{TEMPLATE_IOM_2G.split('.')[0]}{cluster_name}.xlsx"
             new_file_path = os.path.join(self.output_subfolder, cluster_name, new_file_name)
-            os.rename(os.path.join(self.output_subfolder, cluster_name, TEMPLATE_2G), new_file_path)
+            os.rename(os.path.join(self.output_subfolder, cluster_name, TEMPLATE_IOM_2G), new_file_path)
             # open the new file and fill it with the data from the cell table 2g
             fill_template_xlsx(new_file_path, keys_position[0], cell_table_2g_df[keys_to_fill[0]].tolist())
             fill_template_xlsx(new_file_path, keys_position[1], cell_table_2g_df[keys_to_fill[1]].tolist())
@@ -496,17 +500,17 @@ class IOM:
         try:
             if cell_table_3g_df is None:
                 raise Exception("Cell table 3G is not set.")
-            template_file_path = os.path.join(IOM_TEMPLATES_FOLDER, TEMPLATE_3G)
+            template_file_path = os.path.join(IOM_TEMPLATES_FOLDER, TEMPLATE_IOM_3G)
             # copy the template file to the output folder and add the cluster name to the file name
             if not os.path.exists(self.output_subfolder):
                 makedir(self.output_subfolder)
             if not os.path.exists(os.path.join(self.output_subfolder, cluster_name)):
                 makedir(os.path.join(self.output_subfolder, cluster_name))
-            shutil.copy(template_file_path, os.path.join(self.output_subfolder, cluster_name, TEMPLATE_3G))
+            shutil.copy(template_file_path, os.path.join(self.output_subfolder, cluster_name, TEMPLATE_IOM_3G))
             # rename the copied template to have the cluster name at the end (eg HUAWEI_LTE_CUSTOMIZED_CELL_cluster_name.xlsx)
-            new_file_name = f"{TEMPLATE_3G.split('.')[0]}{cluster_name}.xlsx"
+            new_file_name = f"{TEMPLATE_IOM_3G.split('.')[0]}{cluster_name}.xlsx"
             new_file_path = os.path.join(self.output_subfolder, cluster_name, new_file_name)
-            os.rename(os.path.join(self.output_subfolder, cluster_name, TEMPLATE_3G), new_file_path)
+            os.rename(os.path.join(self.output_subfolder, cluster_name, TEMPLATE_IOM_3G), new_file_path)
             # open the new file and fill it with the data from the cell table 3g
             fill_template_xlsx(new_file_path, keys_position[0], cell_table_3g_df[keys_to_fill[0]].tolist())
             fill_template_xlsx(new_file_path, keys_position[1], cell_table_3g_df[keys_to_fill[1]].tolist())
@@ -523,17 +527,17 @@ class IOM:
         try:
             if cell_table_4g_df is None:
                 raise Exception("Cell table 4G is not set.")
-            template_file_path = os.path.join(IOM_TEMPLATES_FOLDER, TEMPLATE_4G)
+            template_file_path = os.path.join(IOM_TEMPLATES_FOLDER, TEMPLATE_IOM_4G)
             # copy the template file to the output folder and add the cluster name to the file name
             if not os.path.exists(self.output_subfolder):
                 makedir(self.output_subfolder)
             if not os.path.exists(os.path.join(self.output_subfolder, cluster_name)):
                 makedir(os.path.join(self.output_subfolder, cluster_name))
-            shutil.copy(template_file_path, os.path.join(self.output_subfolder, cluster_name, TEMPLATE_4G))
+            shutil.copy(template_file_path, os.path.join(self.output_subfolder, cluster_name, TEMPLATE_IOM_4G))
             # rename the copied template to have the cluster name at the end (eg HUAWEI_LTE_CUSTOMIZED_CELL_cluster_name.xlsx)
-            new_file_name = f"{TEMPLATE_4G.split('.')[0]}{cluster_name}.xlsx"
+            new_file_name = f"{TEMPLATE_IOM_4G.split('.')[0]}{cluster_name}.xlsx"
             new_file_path = os.path.join(self.output_subfolder, cluster_name, new_file_name)
-            os.rename(os.path.join(self.output_subfolder, cluster_name, TEMPLATE_4G), new_file_path)
+            os.rename(os.path.join(self.output_subfolder, cluster_name, TEMPLATE_IOM_4G), new_file_path)
             # open the new file and fill it with the data from the cell table 4g
             fill_template_xlsx(new_file_path, keys_position[0], cell_table_4g_df[keys_to_fill[0]].tolist())
             fill_template_xlsx(new_file_path, keys_position[1], cell_table_4g_df[keys_to_fill[1]].tolist())
@@ -550,17 +554,17 @@ class IOM:
         try:
             if cell_table_5g_df is None:
                 raise Exception("Cell table 5G is not set.")
-            template_file_path = os.path.join(IOM_TEMPLATES_FOLDER, TEMPLATE_5G)
+            template_file_path = os.path.join(IOM_TEMPLATES_FOLDER, TEMPLATE_IOM_5G)
             # copy the template file to the output folder and add the cluster name to the file name
             if not os.path.exists(self.output_subfolder):
                 makedir(self.output_subfolder)
             if not os.path.exists(os.path.join(self.output_subfolder, cluster_name)):
                 makedir(os.path.join(self.output_subfolder, cluster_name))
-            shutil.copy(template_file_path, os.path.join(self.output_subfolder, cluster_name, TEMPLATE_5G))
+            shutil.copy(template_file_path, os.path.join(self.output_subfolder, cluster_name, TEMPLATE_IOM_5G))
             # rename the copied template to have the cluster name at the end (eg HUAWEI_LTE_CUSTOMIZED_CELL_cluster_name.xlsx)
-            new_file_name = f"{TEMPLATE_5G.split('.')[0]}{cluster_name}.xlsx"
+            new_file_name = f"{TEMPLATE_IOM_5G.split('.')[0]}{cluster_name}.xlsx"
             new_file_path = os.path.join(self.output_subfolder, cluster_name, new_file_name)
-            os.rename(os.path.join(self.output_subfolder, cluster_name, TEMPLATE_5G), new_file_path)
+            os.rename(os.path.join(self.output_subfolder, cluster_name, TEMPLATE_IOM_5G), new_file_path)
             # open the new file and fill it with the data from the cell table 5g
             fill_template_xlsx(new_file_path, keys_position[0], cell_table_5g_df[keys_to_fill[0]].tolist())
             fill_template_xlsx(new_file_path, keys_position[1], cell_table_5g_df[keys_to_fill[1]].tolist())
